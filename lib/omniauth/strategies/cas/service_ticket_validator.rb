@@ -33,9 +33,28 @@ module OmniAuth
         end
 
       private
+       
+        # extra option for cas version
+        def cas_1?
+          @options.cas_version && @options.cas_version == '1.0'
+        end
+
 
         # turns an `<cas:authenticationSuccess>` node into a Hash;
         # returns nil if given nil
+       def parse_user_info_with_cas_1(result_array)
+          if cas_1?
+            result = {}
+            return result if result_array.nil?
+            result['name'] = result_array[1]
+            result['extra_info'] = result_array[2..-1]
+            result
+          else
+            parse_user_info_without_cas_1(result_array)
+          end
+        end
+        alias_method_chain :parse_user_info, :cas_1
+
         def parse_user_info(node)
           return nil if node.nil?
 
@@ -64,6 +83,19 @@ module OmniAuth
         # finds an `<cas:authenticationSuccess>` node in
         # a `<cas:serviceResponse>` body if present; returns nil
         # if the passed body is nil or if there is no such node.
+        
+        def find_authentication_success_with_cas_1(body)
+          if cas_1?
+            return nil if body.nil? || body == ''
+            result = body.split("\n")
+            return nil if result[0] == 'no'
+            result
+          else
+            find_authentication_success_without_cas_1(body)
+          end
+        end
+        alias_method_chain :find_authentication_success, :cas_1
+
         def find_authentication_success(body)
           return nil if body.nil? || body == ''
           begin
